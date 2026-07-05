@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-import matplotlib.pyplot as plt
+
 
 # ---------------- UI CONFIG ----------------
 st.set_page_config(page_title="Placement Predictor", layout="wide")
