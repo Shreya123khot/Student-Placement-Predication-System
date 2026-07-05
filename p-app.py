@@ -1,67 +1,198 @@
 import streamlit as st
+import pickle
 import numpy as np
-import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 
+# -------------------------------
+# Page Configuration
+# -------------------------------
+st.set_page_config(
+    page_title="Student Placement Prediction",
+    page_icon="🎓",
+    layout="wide"
+)
 
-# ---------------- UI CONFIG ----------------
-st.set_page_config(page_title="Placement Predictor", layout="wide")
-
+# -------------------------------
+# Custom CSS
+# -------------------------------
 st.markdown("""
 <style>
-body {
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
+
+.stApp{
+    background: linear-gradient(to right,#141E30,#243B55);
 }
-.card {
-    background: rgba(255,255,255,0.1);
-    padding: 20px;
-    border-radius: 15px;
-    backdrop-filter: blur(10px);
-    color: white;
+
+h1,h2,h3,label,p{
+    color:white !important;
 }
+
+[data-testid="stMetricValue"]{
+    color:#00FF99;
+}
+
+div[data-testid="metric-container"]{
+    background-color:rgba(255,255,255,0.08);
+    border-radius:15px;
+    padding:15px;
+}
+
+.stButton>button{
+    width:100%;
+    height:55px;
+    border-radius:10px;
+    background:#00C853;
+    color:white;
+    font-size:20px;
+    font-weight:bold;
+}
+
+.stButton>button:hover{
+    background:#009624;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
+# -------------------------------
+# Load Model
+# -------------------------------
+model = pickle.load(open("model.pkl","rb"))
+
+# -------------------------------
+# Sidebar
+# -------------------------------
+st.sidebar.title("🎓 Placement Prediction")
+
+st.sidebar.info("""
+### Student Placement Prediction
+
+✔ Machine Learning
+
+✔ Random Forest
+
+✔ Streamlit
+
+✔ AI Based Prediction
+""")
+
+# -------------------------------
+# Title
+# -------------------------------
 st.title("🎓 Student Placement Prediction System")
-st.write("AI based ML model using Random Forest")
 
-# ---------------- SAMPLE DATA (training demo) ----------------
-data = pd.DataFrame({
-    "CGPA":[6,7,8,9,5,7.5,8.5,9.2],
-    "Internships":[0,1,1,2,0,1,2,2],
-    "Projects":[1,2,3,4,1,3,4,5],
-    "Aptitude":[50,60,70,85,40,75,88,92],
-    "Placed":[0,0,1,1,0,1,1,1]
-})
+st.write("Fill all student details and click **Predict**.")
 
-X = data.drop("Placed", axis=1)
-y = data["Placed"]
+st.markdown("---")
 
-model = RandomForestClassifier()
-model.fit(X, y)
+# -------------------------------
+# Two Columns
+# -------------------------------
+col1,col2=st.columns(2)
 
-# ---------------- INPUT ----------------
-st.subheader("📌 Enter Student Details")
+with col1:
 
-cgpa = st.slider("CGPA", 0.0, 10.0, 7.0)
-internships = st.slider("Internships", 0, 5, 1)
-projects = st.slider("Projects", 0, 10, 2)
-aptitude = st.slider("Aptitude Score", 0, 100, 60)
+    cgpa=st.number_input("CGPA",0.0,10.0,8.0)
 
-input_data = np.array([[cgpa, internships, projects, aptitude]])
+    internships=st.number_input("Internships",0,10,2)
 
-# ---------------- PREDICTION ----------------
+    projects=st.number_input("Projects",0,20,3)
+
+    workshops=st.number_input("Workshops",0,20,2)
+
+    aptitude=st.slider("Aptitude Score",0,100,80)
+
+with col2:
+
+    softskills=st.slider("Soft Skills",0.0,5.0,4.0)
+
+    extracurricular=st.selectbox(
+        "Extracurricular Activities",
+        ["No","Yes"]
+    )
+
+    training=st.selectbox(
+        "Placement Training",
+        ["No","Yes"]
+    )
+
+    ssc=st.slider("SSC Marks",0,100,85)
+
+    hsc=st.slider("HSC Marks",0,100,80)
+
+# Convert Yes/No
+
+extracurricular=1 if extracurricular=="Yes" else 0
+training=1 if training=="Yes" else 0
+
+st.markdown("---")
+
+# -------------------------------
+# Predict
+# -------------------------------
+
 if st.button("Predict Placement"):
-    result = model.predict(input_data)
 
-    if result[0] == 1:
-        st.success("🎉 Student is Likely to be PLACED!")
+    student=np.array([[
+
+        cgpa,
+        internships,
+        projects,
+        workshops,
+        aptitude,
+        softskills,
+        extracurricular,
+        training,
+        ssc,
+        hsc
+
+    ]])
+
+    prediction=model.predict(student)
+
+    probability=model.predict_proba(student)
+
+    placed=probability[0][1]*100
+
+    # Result
+
+    if prediction[0]==1:
+
+        st.success("🎉 Student is Likely to be Placed")
+
+        st.balloons()
+
     else:
-        st.error("❌ Student is NOT likely to be placed")
 
-# ---------------- CHART ----------------
-st.subheader("📊 Data Visualization")
+        st.error("❌ Student is Not Likely to be Placed")
 
-fig, ax = plt.subplots()
-ax.bar(["CGPA","Internships","Projects","Aptitude"], [cgpa, internships, projects, aptitude])
-st.pyplot(fig)
+    # Probability
+
+    st.subheader("📈 Placement Probability")
+
+    st.progress(int(placed))
+
+    st.metric(
+        label="Chance of Placement",
+        value=f"{placed:.2f}%"
+    )
+
+    # Student Score Card
+
+    st.markdown("---")
+
+    st.subheader("🏆 Student Score Card")
+
+    c1,c2,c3=st.columns(3)
+
+    c1.metric("CGPA",cgpa)
+
+    c2.metric("Projects",projects)
+
+    c3.metric("Internships",internships)
+
+    st.bar_chart({
+        "Marks":[ssc,hsc,aptitude]
+    })
+
+st.markdown("---")
+
+st.caption("© 2026 Student Placement Prediction System")
